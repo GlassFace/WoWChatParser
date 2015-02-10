@@ -226,7 +226,7 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseLine(line, startTimestamp, endTimestamp, filter_channels)
+	function ParseLine(line, startTimestamp, endTimestamp, filter_channels, noHtml)
 		-- Separate out the datetimestamp
 		-- TODO: Datetime range filtering
 		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
@@ -307,31 +307,40 @@ local channelPatterns = {}
 			local lineTable = {}
 			-- Line Open
 			--parsedText = parsedText..htmlLineOpen
-			tinsert(lineTable, htmlLineOpen)
-			-- Date
-			--parsedText = parsedText..htmlSpanClassOpen.."date"..htmlSpanClassClose..timeStamp_date.."</span> - "
-			tinsert(lineTable, htmlSpanClassOpen)
-			tinsert(lineTable, "date")
-			tinsert(lineTable, htmlSpanClassClose)
-			tinsert(lineTable, timeStamp_date)
-			tinsert(lineTable, "</span> - ")
-			-- Time
-			--parsedText = parsedText..htmlSpanClassOpen.."time"..htmlSpanClassClose..timeStamp_time.."</span> "
-			tinsert(lineTable, htmlSpanClassOpen)
-			tinsert(lineTable, "time")
-			tinsert(lineTable, htmlSpanClassClose)
-			tinsert(lineTable, timeStamp_time)
-			tinsert(lineTable, "</span> ")
-			-- Channel CSS Class and line text
-			--parsedText = parsedText..htmlSpanClassOpen..channel..htmlSpanClassClose..line
-			tinsert(lineTable, htmlSpanClassOpen)
-			tinsert(lineTable, channel)
-			tinsert(lineTable, htmlSpanClassClose)
-			tinsert(lineTable, line)
-			-- Line Close
-			--parsedText = parsedText..htmlLineClose.."\n"
-			tinsert(lineTable, htmlLineClose)
-			tinsert(lineTable, "\n")
+			if noHtml then
+				-- Date
+				tinsert(lineTable, timeStamp_date)
+				tinsert(lineTable, " ")
+				tinsert(lineTable, timeStamp_time)
+				tinsert(lineTable, line)
+				tinsert(lineTable, "\n")
+			else
+				tinsert(lineTable, htmlLineOpen)
+				-- Date
+				--parsedText = parsedText..htmlSpanClassOpen.."date"..htmlSpanClassClose..timeStamp_date.."</span> - "
+				tinsert(lineTable, htmlSpanClassOpen)
+				tinsert(lineTable, "date")
+				tinsert(lineTable, htmlSpanClassClose)
+				tinsert(lineTable, timeStamp_date)
+				tinsert(lineTable, "</span> - ")
+				-- Time
+				--parsedText = parsedText..htmlSpanClassOpen.."time"..htmlSpanClassClose..timeStamp_time.."</span> "
+				tinsert(lineTable, htmlSpanClassOpen)
+				tinsert(lineTable, "time")
+				tinsert(lineTable, htmlSpanClassClose)
+				tinsert(lineTable, timeStamp_time)
+				tinsert(lineTable, "</span> ")
+				-- Channel CSS Class and line text
+				--parsedText = parsedText..htmlSpanClassOpen..channel..htmlSpanClassClose..line
+				tinsert(lineTable, htmlSpanClassOpen)
+				tinsert(lineTable, channel)
+				tinsert(lineTable, htmlSpanClassClose)
+				tinsert(lineTable, line)
+				-- Line Close
+				--parsedText = parsedText..htmlLineClose.."\n"
+				tinsert(lineTable, htmlLineClose)
+				tinsert(lineTable, "\n")
+			end
 			
 			return tconcat(lineTable)
 		end -- Junkline
@@ -340,7 +349,7 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels)
+	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, noHtml)
 		local start_timestamp_number, end_timestamp_number
 		-- startDateTime
 		if startDateTime then
@@ -387,7 +396,7 @@ local channelPatterns = {}
 		end
 	
 		-- Write HTML Header, CSS & Colors
-		outputFile:write(htmlHeaderOpen..htmlColorsOpen..htmlColors..htmlColorsClose..htmlHeaderClose..htmlBodyOpen)
+		if not noHtml then outputFile:write(htmlHeaderOpen..htmlColorsOpen..htmlColors..htmlColorsClose..htmlHeaderClose..htmlBodyOpen) end
 		
 		local totalLines = totalLines or 0
 		local numLines = 0
@@ -402,7 +411,7 @@ local channelPatterns = {}
 				write(".")
 				numLines = 0
 			end		
-			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels)
+			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, noHtml)
 			if parsedLine then
 				outputFile:write(parsedLine)
 			else
@@ -411,7 +420,7 @@ local channelPatterns = {}
 			numLines = numLines + 1
 			line = inputFile:read()
 		end
-		outputFile:write(htmlBodyClose)
+		if not noHtml then outputFile:write(htmlBodyClose) end
 		
 		return junkLines
 	end	
@@ -453,12 +462,14 @@ local channelPatterns = {}
 	-- ----------------------------------------------------------------		
 	function Main(...)
 		local argv = {...}
-		local inputFileName, outputFileName, startDateTime, endDateTime, filters
+		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml
 		inputFileName = argv[1]
 		outputFileName = argv[2] or "output.htm"
 
-		if strmatch(inputFileName or "", "--.*%=.*") then inputFileName = nil end
-		if strmatch(outputFileName, "--.*%=.*") then outputFileName = nil end
+		print(inputFileName)
+		
+		if inputFileName then if strmatch(inputFileName, "^%-%-.*") then inputFileName = nil end end
+		if strmatch(outputFileName, "^%-%-.*") then outputFileName = nil end
 
 		for key, val in pairs(argv) do
 			inputFileName = strmatch(val, "--input=(.*)%s*") or inputFileName
@@ -466,8 +477,9 @@ local channelPatterns = {}
 			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
 			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
 			filters = strmatch(val, "--filter=(.*)%s*") or filters
+			noHtml = strmatch(val, "--raw") or noHtml
 		end
-
+		
 		Info(not inputFileName) -- Show usage and quit if no inputFileName		
 		
 		-- Escape datetimes
@@ -483,7 +495,11 @@ local channelPatterns = {}
 			if endDateTime then
 				outputFileName = outputFileName.."_to_"..endDateTime
 			end
-			outputFileName = outputFileName..".htm"
+			if noHtml then
+				outputFileName = outputFileName..".txt"
+			else
+				outputFileName = outputFileName..".htm"
+			end
 		end
 
 		-- Filters
@@ -528,7 +544,7 @@ local channelPatterns = {}
 
 		-- Parse and generate HTML
 		local startTime = os.clock()
-		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels)
+		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, noHtml)
 		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
 		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
 		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
