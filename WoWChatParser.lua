@@ -226,7 +226,7 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseLine(line, startTimestamp, endTimestamp, filter_channels, noHtml)
+	function ParseLine(line, startTimestamp, endTimestamp, filter_channels, keyword, avatar, noHtml)
 		-- Separate out the datetimestamp
 		-- TODO: Datetime range filtering
 		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
@@ -287,10 +287,10 @@ local channelPatterns = {}
 			
 			-- Specified Channel
 			-- |Hchannel:GUILD|h[Guild]|h, etc.
-			local specifiedChannel = strmatch(line, "|Hchannel:(.*)|h%[.*%]|h")
+			local specifiedChannel = strmatch(line, "|Hchannel:(.*)|h%[.*%]|h%s")
 			if specifiedChannel then 
 				channel = specifiedChannel
-				line = gsub(line, "|Hchannel:(.*)|h%[.*%]|h", "")
+				line = gsub(line, "|Hchannel:(.*)|h%[.*%]|h%s", "")
 			end
 			
 			channel = strlower(channel)
@@ -299,10 +299,21 @@ local channelPatterns = {}
 			
 			-- Only let entries past if they are in valid channels
 			if filter_channels and not filter_channels[channel] then return nil end
+
+			-- Keyword filter
+			if keyword and not strmatch(line, keyword) then return nil end			
 			
 			-- Channel tag
-			-- TODO: Make optional
-			line = "["..strupper(channel).."]: "..line
+			local channelTag = "["..strupper(channel).."]: "
+			line = channelTag..line
+			
+			-- Avatar filter
+			if avatar then
+				local avatarPattern = "%["..strupper(channel).."%]:%s"..avatar
+				if not strmatch(line, avatarPattern) then 
+					return nil 
+				end
+			end
 
 			local lineTable = {}
 			-- Line Open
@@ -349,7 +360,7 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, noHtml)
+	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
 		local start_timestamp_number, end_timestamp_number
 		-- startDateTime
 		if startDateTime then
@@ -411,7 +422,7 @@ local channelPatterns = {}
 				write(".")
 				numLines = 0
 			end		
-			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, noHtml)
+			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, keyword, avatar, noHtml)
 			if parsedLine then
 				outputFile:write(parsedLine)
 			else
@@ -462,7 +473,7 @@ local channelPatterns = {}
 	-- ----------------------------------------------------------------		
 	function Main(...)
 		local argv = {...}
-		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml
+		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml, keyword, avatar
 		inputFileName = argv[1]
 		outputFileName = argv[2] or "output.htm"
 
@@ -477,6 +488,9 @@ local channelPatterns = {}
 			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
 			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
 			filters = strmatch(val, "--filter=(.*)%s*") or filters
+			keyword = strmatch(val, [[--keyword='(.-)']]) or keyword
+			avatar = strmatch(val, "--avatar=(.*)%s*") or avatar
+			
 			noHtml = strmatch(val, "--raw") or noHtml
 		end
 		
@@ -544,7 +558,7 @@ local channelPatterns = {}
 
 		-- Parse and generate HTML
 		local startTime = os.clock()
-		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, noHtml)
+		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
 		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
 		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
 		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
