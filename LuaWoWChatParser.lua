@@ -1,3 +1,4 @@
+--TODO: Move this to Config, or duplicate it there and leave this table here as a source for defaults
 local channelColors = {}
 channelColors["date"] = "#808080"
 channelColors["time"] = "#606060"
@@ -49,6 +50,7 @@ channelColors["emote"] = "#FF7C41"
 channelColors["unrecognized"] = "#FF7C41"
 channelColors["item"] = "#FFFFFF"
  
+ -- TODO: Move to config
 local junkPatterns = {
 	"FRIEND_ONLINE",
 	"FRIEND_OFFLINE",
@@ -70,32 +72,19 @@ local htmlHeaderOpen = [[
 <title>World of Warcraft Chatlog</title>
 ]]
 
-local htmlColorsOpen = [[
-<style type="text/css">
+local htmlColorsOpen = [[<style type="text/css">
 <!--
   body { background-color: #000000; font-family: Arial; font-size: 14.25px }
   ul,li { color: #808080; list-style: none; margin: 0; padding: 0 }
 ]]
 
-local htmlColorsClose = [[
--->
-</style>
+local htmlColorsClose = [[--></style>]]
+local htmlHeaderClose = [[</head>
 ]]
-
-local htmlHeaderClose = [[
-</head>
+local htmlBodyOpen = [[<body><ul>
 ]]
-
-local htmlBodyOpen = [[	
-<body>
-<ul>
-]]
-
-local htmlBodyClose = [[	
-</ul>
-</body>
-</html>
-]]
+local htmlBodyClose = [[</ul></body>
+</html>]]
 
 local htmlLineOpen = [[ <li> ]]
 local htmlSpanClassOpen = [[ <span class="]]
@@ -225,7 +214,7 @@ local channelPatterns = {}
 		if strlen(str) < 2 then str = "0"..str end
 		return str
 	end
-	
+
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
@@ -251,10 +240,6 @@ local channelPatterns = {}
 		--"2014-"..timeStamp_month.."-"..timeStamp_day.."T"..timeStamp_hours..":"..timeStamp_minutes..":"..timeStamp_seconds.."Z"
 		unix_timeStamp = BuildUnixTimeStamp(2014, timeStamp_month, timeStamp_day, timeStamp_hours, timeStamp_minutes, timeStamp_seconds)
 		timeStamp_number = DatetimeToUNIX(unix_timeStamp)
-		--print(unix_timeStamp)
-		--print(timeStamp_number)
-		
-
 		
 		--[[
 		-- Month numbers to month words
@@ -349,10 +334,10 @@ local channelPatterns = {}
 		if startDateTime then
 			local start_timestamp, startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds
 			-- DateTime
-			local startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds = strmatch(startDateTime, "(%d+)%s*%/%s*(%d+)-(%d+):(%d+):(%d+)")
+			local startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds = strmatch(startDateTime, "(%d+)%s*%_%s*(%d+)-(%d+):(%d+):(%d+)")
 			-- Date Only
 			if not startTime_month then
-				startTime_month, startTime_day = strmatch(startDateTime, "(%d+)%s*%/%s*(%d+)")
+				startTime_month, startTime_day = strmatch(startDateTime, "(%d+)%s*%_%s*(%d+)")
 			end
 			-- Time Only
 			if not startTime_month then
@@ -371,10 +356,10 @@ local channelPatterns = {}
 		if endDateTime then
 			local end_timestamp, endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds
 			-- DateTime
-			local endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds = strmatch(endDateTime, "(%d+)%s*%/%s*(%d+)-(%d+):(%d+):(%d+)")
+			local endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds = strmatch(endDateTime, "(%d+)%s*%_%s*(%d+)-(%d+):(%d+):(%d+)")
 			-- Date only
 			if not endTime_month then
-				endTime_month, endTime_day = strmatch(endDateTime, "(%d+)%s*%/%s*(%d+)")
+				endTime_month, endTime_day = strmatch(endDateTime, "(%d+)%s*%_%s*(%d+)")
 			end
 			-- Time only
 			if not endTime_month then
@@ -469,8 +454,20 @@ local channelPatterns = {}
 			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
 			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
 		end
+		
+		if startDateTime then startDateTime = gsub(startDateTime, "%/", "_") end
+		if endDateTime then endDateTime = gsub(endDateTime, "%/", "_") end
 
-		if not outputFileName then outputFileName = "output.htm" end
+		if not outputFileName then 
+			outputFileName = "output" 
+			if startDateTime then
+				outputFileName = outputFileName.."-"..startDateTime
+			end
+			if endDateTime then
+				outputFileName = outputFileName.."_to_"..endDateTime
+			end
+			outputFileName = outputFileName..".htm"
+		end
 		Info(not inputFileName) -- Show usage if no inputFileName
 		
 
