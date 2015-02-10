@@ -1,56 +1,60 @@
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- Config Stuff
+-- ----------------------------------------------------------------		
 --TODO: Move this to Config, or duplicate it there and leave this table here as a source for defaults
 local channels = {}
-channels["date"] = "#808080"
-channels["time"] = "#606060"
-channels["guild"] = "#40FF40"
-channels["instance"] = "#AEABFC"
-channels["instanceleader"] = "#AEABFC"
-channels["party"] = "#AEABFC"
-channels["partyleader"] = "#7AC5FC"
-channels["raid"] = "#970000"
-channels["raidLeader"] = "#FF4D0B"
-channels["raidwarning"] = "#FFDDB4"
-channels["officer"] = "#40BC40"
-channels["battleground"] = "#FF7D01"
-channels["battlegroundleader"] = "#F8D2AE"
-channels["playerwhisper_in"] = "#FF80FF"
-channels["playerwhisper_out"] = "#FFD0FF"
-channels["yell"] = "#FF4040"
-channels["say"] = "#FFFFFF"
-channels["playersay"] = "#FFFFFF"
-channels["npcwhisper"] = "#FCB5EF"
-channels["npcyell"] = "#FF4040"
-channels["npcsay"] = "#FEFA9F"
-channels["general"] = "#FFFF33"
-channels["trade"] = "#FFFF00"
-channels["localdefense"] = "#FFFF00"
-channels["channel1"] = "#FFC0C0"
-channels["channel2"] = "#FFC0C0"
-channels["channel3"] = "#FFC0C0"
-channels["channel4"] = "#FFC0C0"
-channels["channel5"] = "#FFC0C0"
-channels["channel6"] = "#FFC0C0"
-channels["channel7"] = "#FFC0C0"
-channels["channel8"] = "#FFC0C0"
-channels["channel9"] = "#FFC0C0"
-channels["channel10"] = "#FFC0C0"
-channels["whitespam"] = "#FFFFFF"
-channels["system"] = "#FFFF0B"
-channels["ignoringyou"] = "#FF0700"
-channels["loot"] = "#019700"
-channels["roll"] = "#019700"
-channels["experience"] = "#786DF7"
-channels["reputation"] = "#7C78E7"
-channels["skills"] = "#5F58FF"
-channels["itemcreation"] = "#019700"
-channels["honor"] = "#D8B825"
-channels["battlegroundwarning"] = "#E8CAB0"
-channels["bgalliance"] = "#00A2E1"
-channels["bghorde"] = "#F70000"
-channels["bgmisc"] = "#FF7D01"
-channels["emote"] = "#FF7C41"
-channels["unrecognized"] = "#FF7C41"
-channels["item"] = "#FFFFFF"
+	channels["date"] = "#808080"
+	channels["time"] = "#606060"
+	channels["guild"] = "#40FF40"
+	channels["instance"] = "#AEABFC"
+	channels["instanceleader"] = "#AEABFC"
+	channels["party"] = "#AEABFC"
+	channels["partyleader"] = "#7AC5FC"
+	channels["raid"] = "#970000"
+	channels["raidLeader"] = "#FF4D0B"
+	channels["raidwarning"] = "#FFDDB4"
+	channels["officer"] = "#40BC40"
+	channels["battleground"] = "#FF7D01"
+	channels["battlegroundleader"] = "#F8D2AE"
+	channels["playerwhisper_in"] = "#FF80FF"
+	channels["playerwhisper_out"] = "#FFD0FF"
+	channels["yell"] = "#FF4040"
+	channels["say"] = "#FFFFFF"
+	channels["playersay"] = "#FFFFFF"
+	channels["npcwhisper"] = "#FCB5EF"
+	channels["npcyell"] = "#FF4040"
+	channels["npcsay"] = "#FEFA9F"
+	channels["general"] = "#FFFF33"
+	channels["trade"] = "#FFFF00"
+	channels["localdefense"] = "#FFFF00"
+	channels["channel1"] = "#FFC0C0"
+	channels["channel2"] = "#FFC0C0"
+	channels["channel3"] = "#FFC0C0"
+	channels["channel4"] = "#FFC0C0"
+	channels["channel5"] = "#FFC0C0"
+	channels["channel6"] = "#FFC0C0"
+	channels["channel7"] = "#FFC0C0"
+	channels["channel8"] = "#FFC0C0"
+	channels["channel9"] = "#FFC0C0"
+	channels["channel10"] = "#FFC0C0"
+	channels["whitespam"] = "#FFFFFF"
+	channels["system"] = "#FFFF0B"
+	channels["ignoringyou"] = "#FF0700"
+	channels["loot"] = "#019700"
+	channels["roll"] = "#019700"
+	channels["experience"] = "#786DF7"
+	channels["reputation"] = "#7C78E7"
+	channels["skills"] = "#5F58FF"
+	channels["itemcreation"] = "#019700"
+	channels["honor"] = "#D8B825"
+	channels["battlegroundwarning"] = "#E8CAB0"
+	channels["bgalliance"] = "#00A2E1"
+	channels["bghorde"] = "#F70000"
+	channels["bgmisc"] = "#FF7D01"
+	channels["emote"] = "#FF7C41"
+	channels["unrecognized"] = "#FF7C41"
+	channels["item"] = "#FFFFFF"
  
  -- TODO: Move to config
 local junkPatterns = {
@@ -75,7 +79,11 @@ local channelGroups = {}
 	channelGroups["instance"] = {"instance", "instanceleader"}
 	channelGroups["pvp"] = {"battlegroundwarning", "bgalliance", "bghorde", "bgmisc", "honor"}
  
-local htmlHeaderOpen = [[
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- HTML Constants
+-- ----------------------------------------------------------------
+
+ local htmlHeaderOpen = [[
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
@@ -111,6 +119,10 @@ function BuildColorsCSS()
 end
 local htmlColors = BuildColorsCSS()
 
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- Miscellaneous & Helper Functions
+-- ----------------------------------------------------------------
+
 local months = {}
 	months["1"] = "January"
 	months["2"] = "February"
@@ -141,92 +153,212 @@ local channelPatterns = {}
 	
 	channelPatterns["%w+ .*"] = "emote" -- Gonna catch a lot of false positives here	
 	
-	local strmatch = string.match
-	local strfind = string.find
-	local strsub = string.sub
-	local gsub = string.gsub
-	local tinsert = table.insert
-	local tconcat = table.concat
-	local tconcatkeys = function(t, sep) local str = ""; for key in pairs(t) do str = str..key..(sep or "") end; return str end
-	local strlower = string.lower
-	local strupper = string.upper
-	local strlen = string.len
-	local write = io.write	
-	local strtrim = function(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
+local strmatch = string.match
+local strfind = string.find
+local strsub = string.sub
+local gsub = string.gsub
+local tinsert = table.insert
+local tconcat = table.concat
+local tconcatkeys = function(t, sep) local str = ""; for key in pairs(t) do str = str..key..(sep or "") end; return str end
+local strlower = string.lower
+local strupper = string.upper
+local strlen = string.len
+local write = io.write	
+local strtrim = function(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
 
-	function strsplit(delimiter, text)
-		local list = {}
-		local pos = 1
-		if strfind("", delimiter, 1) then -- this would result in endless loops
-			error("delimiter matches empty string!")
+local function strsplit(delimiter, text)
+	local list = {}
+	local pos = 1
+	if strfind("", delimiter, 1) then -- this would result in endless loops
+		error("delimiter matches empty string!")
+	end
+	while 1 do
+		local first, last = strfind(text, delimiter, pos)
+		if first then -- found?
+			tinsert(list, strsub(text, pos, first-1))
+			pos = last+1
+		else
+			tinsert(list, strsub(text, pos))
+			break
 		end
-		while 1 do
-			local first, last = strfind(text, delimiter, pos)
-			if first then -- found?
-				tinsert(list, strsub(text, pos, first-1))
-				pos = last+1
-			else
-				tinsert(list, strsub(text, pos))
-				break
+	end
+	return list
+end
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- DatetimeToUNIX
+-- Parses a dateString (in UNIX timestamp format) into a time in os.time() format
+-- ----------------------------------------------------------------	
+function DatetimeToUNIX(dateString)
+	local pattern = "(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%p])(%d*)%:?(%d*)";
+	local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin
+	local monthLookup = {Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12}
+	local convertedTimestamp
+	local offset = 0
+	if mode and mode == "ctime" then
+		pattern = "%w+%s+(%w+)%s+(%d+)%s+(%d+)%:(%d+)%:(%d+)%s+(%w+)%s+(%d+)"
+		local monthName, TZName
+		monthName, xday, xhour, xminute, xseconds, TZName, xyear = string.match(dateString,pattern)
+		xmonth = monthLookup[monthName]
+		convertedTimestamp = os.time({year = xyear, month = xmonth,
+		day = xday, hour = xhour, min = xminute, sec = xseconds})
+	else
+		xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
+		convertedTimestamp = os.time({year = xyear, month = xmonth,
+		day = xday, hour = xhour, min = xminute, sec = xseconds})
+		if xoffsetHour then
+			offset = xoffsethour * 60 + xoffsetmin
+			if xoffset == "-" then
+				offset = offset * -1
 			end
 		end
-		return list
 	end
+	return convertedTimestamp + offset
+end	
 
-	function DatetimeToUNIX(dateString)
-		local pattern = "(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%p])(%d*)%:?(%d*)";
-		local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin
-		local monthLookup = {Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12}
-		local convertedTimestamp
-		local offset = 0
-		if mode and mode == "ctime" then
-			pattern = "%w+%s+(%w+)%s+(%d+)%s+(%d+)%:(%d+)%:(%d+)%s+(%w+)%s+(%d+)"
-			local monthName, TZName
-			monthName, xday, xhour, xminute, xseconds, TZName, xyear = string.match(dateString,pattern)
-			xmonth = monthLookup[monthName]
-			convertedTimestamp = os.time({year = xyear, month = xmonth,
-			day = xday, hour = xhour, min = xminute, sec = xseconds})
-		else
-			xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
-			convertedTimestamp = os.time({year = xyear, month = xmonth,
-			day = xday, hour = xhour, min = xminute, sec = xseconds})
-			if xoffsetHour then
-				offset = xoffsethour * 60 + xoffsetmin
-				if xoffset == "-" then
-					offset = offset * -1
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- BuildUnixTimeStamp
+-- Constructs a UNIX dateString from constituent parts
+-- ----------------------------------------------------------------		
+function BuildUnixTimeStamp(year, month, day, hours, minutes, seconds)
+	timestamp = (year or "2014").."-"..(month or "01").."-"..(day or "01").."T"..(hours or "00")..":"..(minutes or "00")..":"..(seconds or "00").."Z"
+	return timestamp
+end
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- TextToLines
+-- ----------------------------------------------------------------		
+function TextToLines(inputText)
+	local textLines = strsplit("\n", inputText)
+	local totalLines = #textLines
+	return textLines, totalLines
+end
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- addLeadingZero
+-- ----------------------------------------------------------------			
+function addLeadingZero(str)
+	if not str then return end
+	if strlen(str) < 2 then str = "0"..str end
+	return str
+end
+
+
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- Parser class
+-- --------------------------------------------------------------------------------------------------------------------------------
+local Parser = {}
+Parser.version = { major = 0.1, minor = 4, }
+Parser.versionString = Parser.version.major..Parser.version.minor
+
+	-- --------------------------------------------------------------------------------------------------------------------------------
+	-- --------------------------------------------------------------------------------------------------------------------------------
+	-- Main
+	-- ----------------------------------------------------------------		
+	function Parser:Main(...)
+		local argv = {...}
+		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml, keyword, avatar
+		inputFileName = argv[1]
+		outputFileName = argv[2] or "output.htm"
+
+		print(inputFileName)
+		
+		if inputFileName then if strmatch(inputFileName, "^%-%-.*") then inputFileName = nil end end
+		if strmatch(outputFileName, "^%-%-.*") then outputFileName = nil end
+
+		for key, val in pairs(argv) do
+			inputFileName = strmatch(val, "--input=(.*)%s*") or inputFileName
+			outputFileName = strmatch(val, "--output=(.*)%s*") or outputFileName
+			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
+			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
+			filters = strmatch(val, "--filter=(.*)%s*") or filters
+			keyword = strmatch(val, [[--keyword='(.-)']]) or keyword
+			avatar = strmatch(val, "--avatar=(.*)%s*") or avatar
+			
+			noHtml = strmatch(val, "--raw") or noHtml
+		end
+		
+		self:Info(not inputFileName) -- Show usage and quit if no inputFileName		
+		
+		-- Escape datetimes
+		if startDateTime then startDateTime = gsub(startDateTime, "%/", "_") end
+		if endDateTime then endDateTime = gsub(endDateTime, "%/", "_") end
+
+		-- Output File Name
+		if not outputFileName then 
+			outputFileName = "output" 
+			if startDateTime then
+				outputFileName = outputFileName.."-"..startDateTime
+			end
+			if endDateTime then
+				outputFileName = outputFileName.."_to_"..endDateTime
+			end
+			if noHtml then
+				outputFileName = outputFileName..".txt"
+			else
+				outputFileName = outputFileName..".htm"
+			end
+		end
+
+		-- Filters
+		local filter_channels
+		if filters then
+			filters = gsub(filters, "%s", "")
+			local filters_table = strsplit(",", filters)
+			filter_channels = {}
+			for key, channel in pairs(filters_table) do
+				if channels[channel] then
+					--tinsert(filter_channels, channel)
+					filter_channels[channel] = true
+				end
+				if channelGroups[channel] then
+					for k, chan in pairs(channelGroups[channel]) do
+						filter_channels[chan] = true
+					end
 				end
 			end
 		end
-		return convertedTimestamp + offset
+
+		-- Open Files
+		local inputFile, errMsg = io.open(inputFileName)
+		if not inputFile then
+			print("Error opening input file:", errMsg)
+			return
+		end
+		local outputFile = io.open(outputFileName, "w")
+		if not outputFile then
+			print("Error opening output file:", errMsg)
+			return
+		end		
+
+		-- Grab input text		
+		local text = inputFile:read("*all")
+		-- Convert input to lines and count
+		local textLines, numLines = TextToLines(text)
+		print("\nParsing input file: "..inputFileName.." with "..numLines.." lines.")
+		inputFile:close()
+		
+		inputFile = io.open(inputFileName) -- Reopen to read by lines
+
+		-- Parse and generate HTML
+		local startTime = os.clock()
+		local junkLines = self:ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
+		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
+		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
+		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
+		if filter_channels then print("Only entries from the following channels were processed: "..tconcatkeys(filter_channels, ", ")) end
+		
+		outputFile:flush()
+		outputFile:close()
+		inputFile:close()
+		
+		return 0
 	end	
 	
-	function BuildUnixTimeStamp(year, month, day, hours, minutes, seconds)
-		timestamp = (year or "2014").."-"..(month or "01").."-"..(day or "01").."T"..(hours or "00")..":"..(minutes or "00")..":"..(seconds or "00").."Z"
-		return timestamp
-	end
-	
-	-- --------------------------------------------------------------------------------------------------------------------------------
-	-- TextToLines
-	-- ----------------------------------------------------------------		
-	function TextToLines(inputText)
-		local textLines = strsplit("\n", inputText)
-		local totalLines = #textLines
-		return textLines, totalLines
-	end
-	
-	-- --------------------------------------------------------------------------------------------------------------------------------
-	-- addLeadingZero
-	-- ----------------------------------------------------------------			
-	function addLeadingZero(str)
-		if not str then return end
-		if strlen(str) < 2 then str = "0"..str end
-		return str
-	end
-
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseLine(line, startTimestamp, endTimestamp, filter_channels, keyword, avatar, noHtml)
+	function Parser:ParseLine(line, startTimestamp, endTimestamp, filter_channels, keyword, avatar, noHtml)
 		-- Separate out the datetimestamp
 		-- TODO: Datetime range filtering
 		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
@@ -360,7 +492,7 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
+	function Parser:ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
 		local start_timestamp_number, end_timestamp_number
 		-- startDateTime
 		if startDateTime then
@@ -422,7 +554,7 @@ local channelPatterns = {}
 				write(".")
 				numLines = 0
 			end		
-			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, keyword, avatar, noHtml)
+			parsedLine = self:ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, keyword, avatar, noHtml)
 			if parsedLine then
 				outputFile:write(parsedLine)
 			else
@@ -439,10 +571,10 @@ local channelPatterns = {}
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- Info
 	-- ----------------------------------------------------------------		
-	function Info(usage)
+	function Parser:Info(usage)
 		print("\n\n========================================")
 		print("== World of Warcraft Chat Log Parser by Kvalyr")
-		print("== Version: 0.01")
+		print("== Version: "..Parser.versionString)
 		print("== See accompanying README for Instructions and Licence")
 		print("== Copyright (c) 2015 Robert Voigt")
 		if not usage then 
@@ -468,107 +600,4 @@ local channelPatterns = {}
 		end
 	end
 	
-	-- --------------------------------------------------------------------------------------------------------------------------------
-	-- Main
-	-- ----------------------------------------------------------------		
-	function Main(...)
-		local argv = {...}
-		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml, keyword, avatar
-		inputFileName = argv[1]
-		outputFileName = argv[2] or "output.htm"
-
-		print(inputFileName)
-		
-		if inputFileName then if strmatch(inputFileName, "^%-%-.*") then inputFileName = nil end end
-		if strmatch(outputFileName, "^%-%-.*") then outputFileName = nil end
-
-		for key, val in pairs(argv) do
-			inputFileName = strmatch(val, "--input=(.*)%s*") or inputFileName
-			outputFileName = strmatch(val, "--output=(.*)%s*") or outputFileName
-			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
-			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
-			filters = strmatch(val, "--filter=(.*)%s*") or filters
-			keyword = strmatch(val, [[--keyword='(.-)']]) or keyword
-			avatar = strmatch(val, "--avatar=(.*)%s*") or avatar
-			
-			noHtml = strmatch(val, "--raw") or noHtml
-		end
-		
-		Info(not inputFileName) -- Show usage and quit if no inputFileName		
-		
-		-- Escape datetimes
-		if startDateTime then startDateTime = gsub(startDateTime, "%/", "_") end
-		if endDateTime then endDateTime = gsub(endDateTime, "%/", "_") end
-
-		-- Output File Name
-		if not outputFileName then 
-			outputFileName = "output" 
-			if startDateTime then
-				outputFileName = outputFileName.."-"..startDateTime
-			end
-			if endDateTime then
-				outputFileName = outputFileName.."_to_"..endDateTime
-			end
-			if noHtml then
-				outputFileName = outputFileName..".txt"
-			else
-				outputFileName = outputFileName..".htm"
-			end
-		end
-
-		-- Filters
-		local filter_channels
-		if filters then
-			filters = gsub(filters, "%s", "")
-			local filters_table = strsplit(",", filters)
-			filter_channels = {}
-			for key, channel in pairs(filters_table) do
-				if channels[channel] then
-					--tinsert(filter_channels, channel)
-					filter_channels[channel] = true
-				end
-				if channelGroups[channel] then
-					for k, chan in pairs(channelGroups[channel]) do
-						filter_channels[chan] = true
-					end
-				end
-			end
-		end
-
-		-- Open Files
-		local inputFile, errMsg = io.open(inputFileName)
-		if not inputFile then
-			print("Error opening input file:", errMsg)
-			return
-		end
-		local outputFile = io.open(outputFileName, "w")
-		if not outputFile then
-			print("Error opening output file:", errMsg)
-			return
-		end		
-
-		-- Grab input text		
-		local text = inputFile:read("*all")
-		-- Convert input to lines and count
-		local textLines, numLines = TextToLines(text)
-		print("\nParsing input file: "..inputFileName.." with "..numLines.." lines.")
-		inputFile:close()
-		
-		inputFile = io.open(inputFileName) -- Reopen to read by lines
-
-		-- Parse and generate HTML
-		local startTime = os.clock()
-		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
-		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
-		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
-		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
-		if filter_channels then print("Only entries from the following channels were processed: "..tconcatkeys(filter_channels, ", ")) end
-		
-		outputFile:flush()
-		outputFile:close()
-		inputFile:close()
-		
-		return 0
-	end
-	
-return Main(...)
+return Parser:Main(...)
