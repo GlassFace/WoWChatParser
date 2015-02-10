@@ -56,18 +56,57 @@ local channels = {}
 	channels["unrecognized"] = "#FF7C41"
 	channels["item"] = "#FFFFFF"
  
- -- TODO: Move to config
+-- TODO: Move to config
 local junkPatterns = {
+	-- System
 	"FRIEND_ONLINE",
 	"FRIEND_OFFLINE",
+	-- Friends/Guild
 	"^.* has gone offline.$",
 	"^.* has come online.$",
+	-- Channels
 	"^Changed Channel: .*",
 	"^Joined Channel: .*", 
 	"^Left Channel: .*", 
-	"^You receive item: .*",
-	"^You create: .*",
+	-- Loot, Crafting
+	"^You receive item: .-%.$",
+	"^You create: .-%.$",
+	"^.- receives loot: .*%.$",
+	"^.- creates:? [%w%s%'$-]-%.$",
+	"^You receive currency: .-%.$",
+	"^You loot 21 Gold, 27 Silver, 90 Copper",
+	"^Loot: .-",
+	"^Your share of the loot is 8 Silver, 9 Copper.",
+	"^Loot: You have selected Disenchant for: .-$",
+	"^Your skill in .- has increased to %d+%.", -- Crafting skillups
+	-- Misc
 	"^You have a firm grip - now JUMP.*",
+	"^Auction created.",
+	"^Bid accepted.",
+	"^You won an auction for .-$",
+	-- Groups, Instances, Queues
+	"^You leave the group.",
+	"^.- has joined the instance group.",
+	"^.- has left the instance group.",
+	"^You are now queued in the Raid Finder.",
+	"^You are now queued in the Dungeon Finder.",
+	"^Dungeon Difficulty set to .-%.",
+	"^Raid Difficulty set to .-%.",
+	"^Looting changed to .-%.",
+	"^Looting set to .-%.",
+	"^Loot threshold set to .-%.",
+	"^You have been removed from the group.",
+	"^Your group has been disbanded.",
+	"^You are in both a party and an instance group. You may communicate with your party with \"/p\" and with your instance group with \"/i\".",
+	"^You are not in a raid group",
+	-- Combat
+	"^.- has died%.",
+	"^You are no longer rested%.",
+	-- PvP
+	"^Your group has joined the queue for All Arenas",
+	"^.- has joined the battle",
+	"^%w- seconds until the Arena battle begins!",
+	"^The Arena battle has begun!",
 }
 
 local channelGroups = {}
@@ -301,19 +340,31 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 		end
 
 		-- Filters
-		local filter_channels
+		local included_channels, excluded_channels
 		if filters then
 			filters = gsub(filters, "%s", "")
 			local filters_table = strsplit(",", filters)
-			filter_channels = {}
-			for key, channel in pairs(filters_table) do
-				if channels[channel] then
-					--tinsert(filter_channels, channel)
-					filter_channels[channel] = true
+			
+			for key, channelOrGroup in pairs(filters_table) do
+				local negatedChannel = strmatch(channelOrGroup, "%-(%w*)")
+				
+				if (negatedChannel and channels[negatedChannel]) then
+					if not excluded_channels then excluded_channels = {} end
+					excluded_channels[negatedChannel] = true
+				elseif channels[channelOrGroup] then
+					if not included_channels then included_channels = {} end
+					included_channels[channelOrGroup] = true
 				end
-				if channelGroups[channel] then
-					for k, chan in pairs(channelGroups[channel]) do
-						filter_channels[chan] = true
+				
+				if (negatedChannel and channelGroups[negatedChannel]) then
+					if not excluded_channels then excluded_channels = {} end
+					for k, chan in pairs(channelGroups[negatedChannel]) do
+						excluded_channels[chan] = true
+					end
+				elseif channelGroups[channelOrGroup] then
+					if not included_channels then included_channels = {} end
+					for k, chan in pairs(channelGroups[channelOrGroup]) do
+						included_channels[chan] = true
 					end
 				end
 			end
@@ -342,11 +393,12 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 
 		-- Parse and generate HTML
 		local startTime = os.clock()
-		local junkLines = self:ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
+		local junkLines = self:ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, included_channels, excluded_channels, keyword, avatar, noHtml)
 		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
 		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
 		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
-		if filter_channels then print("Only entries from the following channels were processed: "..tconcatkeys(filter_channels, ", ")) end
+		if included_channels then print("Only entries from the following channels were processed: "..tconcatkeys(included_channels, ", ")) end
+		if excluded_channels then print("Entries from the following channels were not processed: "..tconcatkeys(excluded_channels, ", ")) end
 		
 		outputFile:flush()
 		outputFile:close()
@@ -358,7 +410,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function Parser:ParseLine(line, startTimestamp, endTimestamp, filter_channels, keyword, avatar, noHtml)
+	function Parser:ParseLine(line, startTimestamp, endTimestamp, included_channels, excluded_channels, keyword, avatar, noHtml)
 		-- Separate out the datetimestamp
 		-- TODO: Datetime range filtering
 		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
@@ -419,10 +471,11 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			
 			-- Specified Channel
 			-- |Hchannel:GUILD|h[Guild]|h, etc.
-			local specifiedChannel = strmatch(line, "|Hchannel:(.*)|h%[.*%]|h%s")
+			-- |Hchannel:INSTANCE_CHAT|h[Instance]|h
+			local specifiedChannel = strmatch(line, "|Hchannel:.*|h%[(.*)%]|h%s")
 			if specifiedChannel then 
 				channel = specifiedChannel
-				line = gsub(line, "|Hchannel:(.*)|h%[.*%]|h%s", "")
+				line = gsub(line, "|Hchannel:.*|h%[.*%]|h%s", "")
 			end
 			
 			channel = strlower(channel)
@@ -430,7 +483,12 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			if not channels[channel] then channel = "unknown" end
 			
 			-- Only let entries past if they are in valid channels
-			if filter_channels and not filter_channels[channel] then return nil end
+			if included_channels then
+				if not included_channels[channel] then return nil end -- Blocked by virtue of not being a filter channel
+			end
+			if excluded_channels then
+				if excluded_channels[channel] then return nil end
+			end
 
 			-- Keyword filter
 			if keyword and not strmatch(line, keyword) then return nil end			
@@ -492,7 +550,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function Parser:ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, filter_channels, keyword, avatar, noHtml)
+	function Parser:ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime, included_channels, excluded_channels, keyword, avatar, noHtml)
 		local start_timestamp_number, end_timestamp_number
 		-- startDateTime
 		if startDateTime then
@@ -554,7 +612,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 				write(".")
 				numLines = 0
 			end		
-			parsedLine = self:ParseLine(line, start_timestamp_number, end_timestamp_number, filter_channels, keyword, avatar, noHtml)
+			parsedLine = self:ParseLine(line, start_timestamp_number, end_timestamp_number, included_channels, excluded_channels, keyword, avatar, noHtml)
 			if parsedLine then
 				outputFile:write(parsedLine)
 			else
