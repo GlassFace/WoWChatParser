@@ -160,15 +160,7 @@ local htmlLineClose = [[ </span></li> ]]
 		local mult = 10^(idp or 0)
 		return math.floor(num * mult + 0.5) / mult
 	end
-	
-	--[[
-	function calculateProgressTickRate(numLines)
-		local progressTick = round(totalLines / 10, 0)
-		return progressTick
-	end
-	--]]--
-	
-	-- [[
+
 	local write = io.write
 	
 	-- --------------------------------------------------------------------------------------------------------------------------------
@@ -183,107 +175,120 @@ local htmlLineClose = [[ </span></li> ]]
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseText(textLines, totalLines)
+	function ParseLine(line)
+		-- Separate out the datetimestamp
+		-- TODO: Datetime range filtering
+		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
+		local timeStamp = strmatch(line, timeStampPattern) or ""
+		line = gsub(line, timeStamp, "")
+		local timeStamp_date = strmatch(timeStamp, "%d+%/%d+") or "timestamp_date"
+		local timeStamp_time = strmatch(timeStamp, "%d+:%d+:%d+") or "timestamp_time"
+		
+		-- Trim whitespace
+		line = strtrim(line)
+		
+		-- Filter out junk
+		local junkLine = false
+		for key, pattern in pairs(junkPatterns) do
+			if strmatch(line, pattern) then
+				--print("Junkline:", pattern, "--", "'"..line.."'")
+				junkLine = true
+			end
+		end
+		
+		if junkLine then
+			return nil
+		else
+			-- Try to determine the channel
+			local channel = ""
+			for pattern, channelByPattern in pairs(channelPatterns) do
+				if strmatch(line, pattern) then
+					channel = channelByPattern
+					break
+				end
+			end
+			
+			-- Specified Channel
+			-- |Hchannel:GUILD|h[Guild]|h, etc.
+			local specifiedChannel = strmatch(line, "|Hchannel:(.*)|h%[.*%]|h")
+			if specifiedChannel then 
+				channel = specifiedChannel
+				line = gsub(line, "|Hchannel:(.*)|h%[.*%]|h", "")
+			end
+			
+			channel = strlower(channel)
+			channel = gsub(channel, " ", "")
+			if not channelColors[channel] then channel = "unknown" end
+			
+			-- Channel tag
+			-- TODO: Make optional
+			line = "["..strupper(channel).."]: "..line
 
-		-- Open HTML
-		local parsedTextTable = {htmlHeaderOpen..htmlColorsOpen..htmlColors..htmlColorsClose..htmlHeaderClose..htmlBodyOpen}
-		local totalLines = totalLines or #textLines
+			local lineTable = {}
+			-- Line Open
+			--parsedText = parsedText..htmlLineOpen
+			tinsert(lineTable, htmlLineOpen)
+			-- Date
+			--parsedText = parsedText..htmlSpanClassOpen.."date"..htmlSpanClassClose..timeStamp_date.."</span> - "
+			tinsert(lineTable, htmlSpanClassOpen)
+			tinsert(lineTable, "date")
+			tinsert(lineTable, htmlSpanClassClose)
+			tinsert(lineTable, timeStamp_date)
+			tinsert(lineTable, "</span> - ")
+			-- Time
+			--parsedText = parsedText..htmlSpanClassOpen.."time"..htmlSpanClassClose..timeStamp_time.."</span> "
+			tinsert(lineTable, htmlSpanClassOpen)
+			tinsert(lineTable, "time")
+			tinsert(lineTable, htmlSpanClassClose)
+			tinsert(lineTable, timeStamp_time)
+			tinsert(lineTable, "</span> ")
+			-- Channel CSS Class and line text
+			--parsedText = parsedText..htmlSpanClassOpen..channel..htmlSpanClassClose..line
+			tinsert(lineTable, htmlSpanClassOpen)
+			tinsert(lineTable, channel)
+			tinsert(lineTable, htmlSpanClassClose)
+			tinsert(lineTable, line)
+			-- Line Close
+			--parsedText = parsedText..htmlLineClose.."\n"
+			tinsert(lineTable, htmlLineClose)
+			tinsert(lineTable, "\n")
+			
+			return table.concat(lineTable)
+		end -- Junkline
+	end
+	
+	-- --------------------------------------------------------------------------------------------------------------------------------
+	-- ParseText
+	-- ----------------------------------------------------------------		
+	function ParseText(inputFile, outputFile, totalLines)
+
+		outputFile:write(htmlHeaderOpen..htmlColorsOpen..htmlColors..htmlColorsClose..htmlHeaderClose..htmlBodyOpen)
+		
+		local totalLines = totalLines or 0
 		local numLines = 0
 		local junkLines = 0
 		local progressTick = totalLines / 100
-		for key, line in pairs(textLines) do
-
+		
+		local line = inputFile:read("*line")
+		while line do
 			-- Activity/Progress Display
 			if numLines >= progressTick then
 				write(".")
 				numLines = 0
+			end		
+			parsedLine = ParseLine(line)
+			if parsedLine then
+				outputFile:write(parsedLine)
+			else
+				junkLines = junkLines + 1
 			end
-			
-			-- Separate out the datetimestamp
-			-- TODO: Datetime range filtering
-			local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
-			local timeStamp = strmatch(line, timeStampPattern) or ""
-			line = gsub(line, timeStamp, "")
-			local timeStamp_date = strmatch(timeStamp, "%d+%/%d+") or "timestamp_date"
-			local timeStamp_time = strmatch(timeStamp, "%d+:%d+:%d+") or "timestamp_time"
-			
-			-- Trim whitespace
-			line = strtrim(line)
-			
-			-- Filter out junk
-			local junkLine = false
-			for key, pattern in pairs(junkPatterns) do
-				if strmatch(line, pattern) then
-					--print("Junkline:", pattern, "--", "'"..line.."'")
-					junkLine = true
-					junkLines = junkLines + 1
-				end
-			end
-			
-			if not junkLine then
-			
-				-- Try to determine the channel
-				local channel = ""
-				for pattern, channelByPattern in pairs(channelPatterns) do
-					if strmatch(line, pattern) then
-						channel = channelByPattern
-						break
-					end
-				end
-				
-				-- Specified Channel
-				-- |Hchannel:GUILD|h[Guild]|h, etc.
-				local specifiedChannel = strmatch(line, "|Hchannel:(.*)|h%[.*%]|h")
-				if specifiedChannel then 
-					channel = specifiedChannel
-					line = gsub(line, "|Hchannel:(.*)|h%[.*%]|h", "")
-				end
-				
-				channel = strlower(channel)
-				channel = gsub(channel, " ", "")
-				if not channelColors[channel] then channel = "unknown" end
-				
-				-- Channel tag
-				-- TODO: Make optional
-				line = "["..strupper(channel).."]: "..line
-
-				-- Line Open
-				--parsedText = parsedText..htmlLineOpen
-				tinsert(parsedTextTable, htmlLineOpen)
-				-- Date
-				--parsedText = parsedText..htmlSpanClassOpen.."date"..htmlSpanClassClose..timeStamp_date.."</span> - "
-				tinsert(parsedTextTable, htmlSpanClassOpen)
-				tinsert(parsedTextTable, "date")
-				tinsert(parsedTextTable, htmlSpanClassClose)
-				tinsert(parsedTextTable, timeStamp_date)
-				tinsert(parsedTextTable, "</span> - ")
-				-- Time
-				--parsedText = parsedText..htmlSpanClassOpen.."time"..htmlSpanClassClose..timeStamp_time.."</span> "
-				tinsert(parsedTextTable, htmlSpanClassOpen)
-				tinsert(parsedTextTable, "time")
-				tinsert(parsedTextTable, htmlSpanClassClose)
-				tinsert(parsedTextTable, timeStamp_time)
-				tinsert(parsedTextTable, "</span> ")
-				-- Channel CSS Class and line text
-				--parsedText = parsedText..htmlSpanClassOpen..channel..htmlSpanClassClose..line
-				tinsert(parsedTextTable, htmlSpanClassOpen)
-				tinsert(parsedTextTable, channel)
-				tinsert(parsedTextTable, htmlSpanClassClose)
-				tinsert(parsedTextTable, line)
-				-- Line Close
-				--parsedText = parsedText..htmlLineClose.."\n"
-				tinsert(parsedTextTable, htmlLineClose)
-				tinsert(parsedTextTable, "\n")
-			end -- Junkline
 			numLines = numLines + 1
+			line = inputFile:read()
 		end
+		outputFile:write(htmlBodyClose)
 		
-		-- Close HTML Body
-		tinsert(parsedTextTable, htmlBodyClose)
-		local parsedText = table.concat(parsedTextTable)
-		return parsedText, junkLines
+		return junkLines
 	end	
-	--]]--
 	
 	local argv = {...}
 	
@@ -292,18 +297,22 @@ local htmlLineClose = [[ </span></li> ]]
 	local inputFile = io.open(inputFileName)
 	local text = inputFile:read("*all")
 	inputFile:close()
+	inputFile = io.open(inputFileName)
 	
-	-- Convert input to lines
+	-- Convert input to lines and count
 	local textLines, numLines = TextToLines(text)
 	print("\nParsing input file: "..inputFileName.." with "..numLines.." lines.")
+	local outputFileName = argv[2] or "output.htm"
+	local outputFile = io.open(outputFileName, "w")	
+	
+	local startTime = os.clock()
+    local s = 0
+    print()	
 	
 	-- Parse and generate HTML
-	local outputText, junkLines = ParseText(textLines, numLines)
+	local junkLines = ParseText(inputFile, outputFile, numLines)
+	print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
 	
-	-- Write output to file
-	local outputFileName = argv[2] or "output.htm"
-	local outputFile = io.open(outputFileName, "w")
-	print("\nWriting "..(numLines-junkLines).." lines after filtering.\nWriting output to file: "..outputFileName)
-	outputFile:write(outputText)
 	outputFile:flush()
 	outputFile:close()
+	inputFile:close()
