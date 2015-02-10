@@ -48,7 +48,20 @@ channelColors["bgmisc"] = "#FF7D01"
 channelColors["emote"] = "#FF7C41"
 channelColors["unrecognized"] = "#FF7C41"
 channelColors["item"] = "#FFFFFF"
-  
+ 
+local junkPatterns = {
+	"FRIEND_ONLINE",
+	"FRIEND_OFFLINE",
+	"^.* has gone offline.$",
+	"^.* has come online.$",
+	"^Changed Channel: .*",
+	"^Joined Channel: .*", 
+	"^Left Channel: .*", 
+	"^You receive item: .*",
+	"^You create: .*",
+	"^You have a firm grip - now JUMP.*",
+}
+ 
 local htmlHeaderOpen = [[
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -84,35 +97,36 @@ local htmlBodyClose = [[
 </html>
 ]]
 
-	function BuildColorsCSS()
-		local colorsCSS = ""
-		for colorName, colorValue in pairs(channelColors) do
-			colorsCSS = colorsCSS.."."..colorName.." { color: "..colorValue.." }".."\n"
-		end
-		return colorsCSS
-	end
-
-local htmlColors = BuildColorsCSS()
-
 local htmlLineOpen = [[ <li> ]]
 local htmlSpanClassOpen = [[ <span class="]]
 local htmlSpanClassClose = [["> ]]
 local htmlLineClose = [[ </span></li> ]]
 
-	local junkPatterns = {
-	"FRIEND_ONLINE",
-	"FRIEND_OFFLINE",
-	"^.* has gone offline.$",
-	"^.* has come online.$",
-	"^Changed Channel: .*",
-	"^Joined Channel: .*", 
-	"^Left Channel: .*", 
-	"^You receive item: .*",
-	"^You create: .*",
-	"^You have a firm grip - now JUMP.*",
-	}
+function BuildColorsCSS()
+	local colorsCSS = ""
+	for colorName, colorValue in pairs(channelColors) do
+		colorsCSS = colorsCSS.."."..colorName.." { color: "..colorValue.." }".."\n"
+	end
+	return colorsCSS
+end
+local htmlColors = BuildColorsCSS()
 
-	local channelPatterns = {}
+local months = {}
+	months["1"] = "January"
+	months["2"] = "February"
+	months["3"] = "March"
+	months["4"] = "April"
+	months["5"] = "May"
+	months["6"] = "June"
+	months["7"] = "July"
+	months["8"] = "August"
+	months["9"] = "September"
+	months["10"] = "October"
+	months["11"] = "November"
+	months["12"] = "December"
+
+
+local channelPatterns = {}
 	channelPatterns["%w+ says:"] = "say"
 	channelPatterns["%w+ yells:"] = "yell"
 	channelPatterns["%w+ rolls %d+"] = "roll"
@@ -120,13 +134,12 @@ local htmlLineClose = [[ </span></li> ]]
 	channelPatterns["^To %w+: .*"] = "playerwhisper_out"
 	channelPatterns["^To |.*|.*|.*: .*"] = "playerwhisper_out"
 	
+	-- TODO: Fix these:
 	--channelPatterns["^%[1%. General%] %w+: "] = "general"
 	channelPatterns["^%[2%. Trade%] %w+: "] = "trade"
 	--channelPatterns["^%[3%. LocalDefense%] %w+: "] = "localdefense"
 	
-	
 	channelPatterns["%w+ .*"] = "emote" -- Gonna catch a lot of false positives here	
-	
 	
 	local strmatch = string.match
 	local strfind = string.find
@@ -135,6 +148,7 @@ local htmlLineClose = [[ </span></li> ]]
 	local tinsert = table.insert	
 	local strlower = string.lower
 	local strupper = string.upper
+	local strlen = string.len
 	local strtrim = function(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
 
 	function strsplit(delimiter, text)
@@ -156,11 +170,45 @@ local htmlLineClose = [[ </span></li> ]]
 		return list
 	end
 	
+	--[[
 	function round(num, idp)
 		local mult = 10^(idp or 0)
 		return math.floor(num * mult + 0.5) / mult
 	end
+	--]]--
 
+	function DatetimeToUNIX(dateString)
+		local pattern = "(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%p])(%d*)%:?(%d*)";
+		local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin
+		local monthLookup = {Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12}
+		local convertedTimestamp
+		local offset = 0
+		if mode and mode == "ctime" then
+			pattern = "%w+%s+(%w+)%s+(%d+)%s+(%d+)%:(%d+)%:(%d+)%s+(%w+)%s+(%d+)"
+			local monthName, TZName
+			monthName, xday, xhour, xminute, xseconds, TZName, xyear = string.match(dateString,pattern)
+			xmonth = monthLookup[monthName]
+			convertedTimestamp = os.time({year = xyear, month = xmonth,
+			day = xday, hour = xhour, min = xminute, sec = xseconds})
+		else
+			xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
+			convertedTimestamp = os.time({year = xyear, month = xmonth,
+			day = xday, hour = xhour, min = xminute, sec = xseconds})
+			if xoffsetHour then
+				offset = xoffsethour * 60 + xoffsetmin
+				if xoffset == "-" then
+					offset = offset * -1
+				end
+			end
+		end
+		return convertedTimestamp + offset
+	end	
+	
+	function BuildUnixTimeStamp(year, month, day, hours, minutes, seconds)
+		timestamp = (year or "2014").."-"..(month or "01").."-"..(day or "01").."T"..(hours or "00")..":"..(minutes or "00")..":"..(seconds or "00").."Z"
+		return timestamp
+	end
+	
 	local write = io.write
 	
 	-- --------------------------------------------------------------------------------------------------------------------------------
@@ -172,10 +220,16 @@ local htmlLineClose = [[ </span></li> ]]
 		return textLines, totalLines
 	end
 	
+	function addLeadingZero(str)
+		if not str then return end
+		if strlen(str) < 2 then str = "0"..str end
+		return str
+	end
+	
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseLine(line)
+	function ParseLine(line, startTimestamp, endTimestamp)
 		-- Separate out the datetimestamp
 		-- TODO: Datetime range filtering
 		local timeStampPattern = "%d+%/%d+ %d+:%d+:%d+%.%d+"
@@ -184,6 +238,31 @@ local htmlLineClose = [[ </span></li> ]]
 		local timeStamp_date = strmatch(timeStamp, "%d+%/%d+") or "timestamp_date"
 		local timeStamp_time = strmatch(timeStamp, "%d+:%d+:%d+") or "timestamp_time"
 		
+		local timeStamp_month, timeStamp_day = strmatch(timeStamp_date, "(%d+)%/(%d+)")
+		local timeStamp_hours, timeStamp_minutes, timeStamp_seconds = strmatch(timeStamp_time, "(%d+):(%d+):(%d+)")
+		
+		timeStamp_month = addLeadingZero(timeStamp_month)
+		timeStamp_day = addLeadingZero(timeStamp_day)
+		timeStamp_hours = addLeadingZero(timeStamp_hours)
+		timeStamp_minutes = addLeadingZero(timeStamp_minutes)
+		timeStamp_seconds = addLeadingZero(timeStamp_seconds)
+		
+		-- WoW doesn't put year in its log.. Awkward around December/January..
+		--"2014-"..timeStamp_month.."-"..timeStamp_day.."T"..timeStamp_hours..":"..timeStamp_minutes..":"..timeStamp_seconds.."Z"
+		unix_timeStamp = BuildUnixTimeStamp(2014, timeStamp_month, timeStamp_day, timeStamp_hours, timeStamp_minutes, timeStamp_seconds)
+		timeStamp_number = DatetimeToUNIX(unix_timeStamp)
+		--print(unix_timeStamp)
+		--print(timeStamp_number)
+		
+
+		
+		--[[
+		-- Month numbers to month words
+		
+		timeStamp_date = gsub(timeStamp_date, timeStamp_month, months[timeStamp_month])
+		--]]--
+		timeStamp_date = gsub(timeStamp_date, "%/", " %/ ")
+		
 		-- Trim whitespace
 		line = strtrim(line)
 		
@@ -191,9 +270,13 @@ local htmlLineClose = [[ </span></li> ]]
 		local junkLine = false
 		for key, pattern in pairs(junkPatterns) do
 			if strmatch(line, pattern) then
-				--print("Junkline:", pattern, "--", "'"..line.."'")
 				junkLine = true
 			end
+		end
+		
+		if (startTimestamp and startTimestamp > timeStamp_number) or (endTimestamp and endTimestamp <= timeStamp_number) then
+			junkLine = true
+			--print("Filtering by time:", startTimestamp, endTimeStamp, timeStamp_number)
 		end
 		
 		if junkLine then
@@ -260,15 +343,61 @@ local htmlLineClose = [[ </span></li> ]]
 	-- --------------------------------------------------------------------------------------------------------------------------------
 	-- ParseText
 	-- ----------------------------------------------------------------		
-	function ParseText(inputFile, outputFile, totalLines)
-
+	function ParseText(inputFile, outputFile, totalLines, startDateTime, endDateTime)
+		local start_timestamp_number, end_timestamp_number
+		-- startDateTime
+		if startDateTime then
+			local start_timestamp, startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds
+			-- DateTime
+			local startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds = strmatch(startDateTime, "(%d+)%s*%/%s*(%d+)-(%d+):(%d+):(%d+)")
+			-- Date Only
+			if not startTime_month then
+				startTime_month, startTime_day = strmatch(startDateTime, "(%d+)%s*%/%s*(%d+)")
+			end
+			-- Time Only
+			if not startTime_month then
+				startTime_hours, startTime_minutes, startTime_seconds = strmatch(startDateTime, "(%d+):(%d+):(%d+)")
+			end
+			startTime_month = addLeadingZero(startTime_month) or "01"
+			startTime_day = addLeadingZero(startTime_day) or "01"
+			startTime_hours = addLeadingZero(startTime_hours) or "00"
+			startTime_minutes = addLeadingZero(startTime_minutes) or "00"
+			startTime_seconds = addLeadingZero(startTime_seconds) or "00"
+			start_timestamp = BuildUnixTimeStamp(2014, startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds)
+			start_timestamp_number = DatetimeToUNIX(start_timestamp)
+		end
+		
+		-- endDateTime
+		if endDateTime then
+			local end_timestamp, endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds
+			-- DateTime
+			local endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds = strmatch(endDateTime, "(%d+)%s*%/%s*(%d+)-(%d+):(%d+):(%d+)")
+			-- Date only
+			if not endTime_month then
+				endTime_month, endTime_day = strmatch(endDateTime, "(%d+)%s*%/%s*(%d+)")
+			end
+			-- Time only
+			if not endTime_month then
+				endTime_hours, endTime_minutes, endTime_seconds = strmatch(endDateTime, "(%d+):(%d+):(%d+)")
+			end			
+			endTime_month = addLeadingZero(endTime_month) or "12"
+			endTime_day = addLeadingZero(endTime_day) or "31"
+			endTime_hours = addLeadingZero(endTime_hours) or "23"
+			endTime_minutes = addLeadingZero(endTime_minutes) or "59"
+			endTime_seconds = addLeadingZero(endTime_seconds) or "59"
+			end_timestamp = BuildUnixTimeStamp(2014, endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds)
+			end_timestamp_number = DatetimeToUNIX(end_timestamp)
+		end
+	
+		-- Write HTML Header, CSS & Colors
 		outputFile:write(htmlHeaderOpen..htmlColorsOpen..htmlColors..htmlColorsClose..htmlHeaderClose..htmlBodyOpen)
 		
 		local totalLines = totalLines or 0
 		local numLines = 0
 		local junkLines = 0
 		local progressTick = totalLines / 100
-		
+
+		-- Read file by lines
 		local line = inputFile:read("*line")
 		while line do
 			-- Activity/Progress Display
@@ -276,7 +405,7 @@ local htmlLineClose = [[ </span></li> ]]
 				write(".")
 				numLines = 0
 			end		
-			parsedLine = ParseLine(line)
+			parsedLine = ParseLine(line, start_timestamp_number, end_timestamp_number)
 			if parsedLine then
 				outputFile:write(parsedLine)
 			else
@@ -290,29 +419,91 @@ local htmlLineClose = [[ </span></li> ]]
 		return junkLines
 	end	
 	
-	local argv = {...}
+	-- --------------------------------------------------------------------------------------------------------------------------------
+	-- Info
+	-- ----------------------------------------------------------------		
+	function Info(usage)
+		print("\n\n========================================")
+		print("== World of Warcraft Chat Log Parser by Kvalyr")
+		print("== Version: 0.01")
+		print("== See accompanying README for Instructions and Licence")
+		print("== Copyright (c) 2015 Robert Voigt")
+		if not usage then 
+			print("====================")
+		else
+			print("========================================")
+			print("== Usage instructions:")
+			print("====================")
+			print("wowchatparser --input=INPUTFILE --output=OUTPUTFILE --start=STARTDATETIME --end=ENDDATETIME")
+			print("Input is mandatory. All others are optional. Default output to 'output.htm'")
+			print("")
+			print("'wowchatparser input.txt output.htm'")
+			print("        + Read log from input.txt and write formatted log to output.htm")
+			print("")
+			print("'wowchatparser input.txt output.htm --start=01/01-01:02:30 --end=09/27-04:03:00'")
+			print("        + Read log from input.txt and write formatted log to output.htm")
+			print("        + Discard entries before 01/01-01:02:30 (January 1st, 01:02:30")
+			print("        + Discard entries after 09/27-04:03:00 (September 27th, 04:03:00")
+			print("")
+			print("'wowchatparser --output=output.txt'")
+			print("        + Discard entries after 09/27-04:03:00 (September 27th, 04:03:00")		
+			os.exit()
+		end
+	end
 	
-	-- Grab input text
-	local inputFileName = argv[1] or "input.txt"
-	local inputFile = io.open(inputFileName)
-	local text = inputFile:read("*all")
-	inputFile:close()
-	inputFile = io.open(inputFileName)
+	-- --------------------------------------------------------------------------------------------------------------------------------
+	-- Main
+	-- ----------------------------------------------------------------		
+	function Main(...)
+		local argv = {...}
+		local inputFileName, outputFileName, startDateTime, endDateTime
+		inputFileName = argv[1]
+		outputFileName = argv[2] or "output.htm"
+
+		if strmatch(inputFileName or "", "--.*%=.*") then inputFileName = nil end
+		if strmatch(outputFileName, "--.*%=.*") then outputFileName = nil end
+
+		for key, val in pairs(argv) do
+			inputFileName = strmatch(val, "--input=(.*)%s*") or inputFileName
+			outputFileName = strmatch(val, "--output=(.*)%s*") or outputFileName
+			startDateTime = strmatch(val, "--start=(.*)%s*") or startDateTime
+			endDateTime = strmatch(val, "--end=(.*)%s*") or endDateTime
+		end
+
+		if not outputFileName then outputFileName = "output.htm" end
+		Info(not inputFileName) -- Show usage if no inputFileName
+		
+
+		local inputFile, errMsg = io.open(inputFileName)
+		if not inputFile then
+			print("Error opening input file:", errMsg)
+			return
+		end
+		local outputFile = io.open(outputFileName, "w")
+		if not outputFile then
+			print("Error opening output file:", errMsg)
+			return
+		end		
+
+		-- Grab input text		
+		local text = inputFile:read("*all")
+		-- Convert input to lines and count
+		local textLines, numLines = TextToLines(text)
+		print("\nParsing input file: "..inputFileName.." with "..numLines.." lines.")
+		inputFile:close()
+		
+		inputFile = io.open(inputFileName) -- Reopen to read by lines
+
+		-- Parse and generate HTML
+		local startTime = os.clock()
+		local junkLines = ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime)
+		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
+		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
+		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
+
+		outputFile:flush()
+		outputFile:close()
+		inputFile:close()
+	end
 	
-	-- Convert input to lines and count
-	local textLines, numLines = TextToLines(text)
-	print("\nParsing input file: "..inputFileName.." with "..numLines.." lines.")
-	local outputFileName = argv[2] or "output.htm"
-	local outputFile = io.open(outputFileName, "w")	
-	
-	local startTime = os.clock()
-    local s = 0
-    print()	
-	
-	-- Parse and generate HTML
-	local junkLines = ParseText(inputFile, outputFile, numLines)
-	print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
-	
-	outputFile:flush()
-	outputFile:close()
-	inputFile:close()
+Main(...)
