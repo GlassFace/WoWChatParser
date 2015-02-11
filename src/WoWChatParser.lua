@@ -492,7 +492,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			channel = strlower(channel)
 			channel = gsub(channel, " ", "")
 			if not channels[channel] then 
-				print("unknown channel: "..channel, "line:", line)
+				--print("unknown channel: "..channel, "line:", line)
 				channel = "unknown" 
 			end
 			

@@ -1,1 +1,0 @@
-srLua\glue.exe srLua\srlua.exe WoWChatParser.lua WoWChatParser.exe
