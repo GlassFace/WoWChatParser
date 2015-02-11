@@ -26,8 +26,8 @@ local channels = {}
 	channels["npcyell"] = "#FF4040"
 	channels["npcsay"] = "#FEFA9F"
 	channels["general"] = "#FFFF33"
-	channels["trade"] = "#FFFF00"
-	channels["localdefense"] = "#FFFF00"
+	channels["trade"] = "#DDDD00"
+	channels["localdefense"] = "#BBBB22"
 	channels["channel1"] = "#FFC0C0"
 	channels["channel2"] = "#FFC0C0"
 	channels["channel3"] = "#FFC0C0"
@@ -57,6 +57,7 @@ local channels = {}
 	channels["item"] = "#FFFFFF"
  
 -- TODO: Move to config
+-- TODO: Move some of these to channelPatterns
 local junkPatterns = {
 	-- System
 	"FRIEND_ONLINE",
@@ -84,6 +85,8 @@ local junkPatterns = {
 	"^Auction created.",
 	"^Bid accepted.",
 	"^You won an auction for .-$",
+	"^You are now Away: .-$",
+	"^You are no longer Away.$",
 	-- Groups, Instances, Queues
 	"^You leave the group.",
 	"^.- has joined the instance group.",
@@ -187,7 +190,7 @@ local channelPatterns = {}
 	
 	-- TODO: Fix these:
 	--channelPatterns["^%[1%. General%] %w+: "] = "general"
-	channelPatterns["^%[2%. Trade%] %w+: "] = "trade"
+	--channelPatterns["^%[2%. Trade%] %w+: "] = "trade"
 	--channelPatterns["^%[3%. LocalDefense%] %w+: "] = "localdefense"
 	
 	channelPatterns["%w+ .*"] = "emote" -- Gonna catch a lot of false positives here	
@@ -287,7 +290,7 @@ end
 -- Parser class
 -- --------------------------------------------------------------------------------------------------------------------------------
 local Parser = {}
-Parser.version = { major = 0.1, minor = 4, }
+Parser.version = { major = 0.2, minor = 0, }
 Parser.versionString = Parser.version.major..Parser.version.minor
 
 	-- --------------------------------------------------------------------------------------------------------------------------------
@@ -469,18 +472,29 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 				end
 			end
 			
-			-- Specified Channel
+			-- HChannel
 			-- |Hchannel:GUILD|h[Guild]|h, etc.
 			-- |Hchannel:INSTANCE_CHAT|h[Instance]|h
-			local specifiedChannel = strmatch(line, "|Hchannel:.*|h%[(.*)%]|h%s")
-			if specifiedChannel then 
-				channel = specifiedChannel
+			local hChannel = strmatch(line, "|Hchannel:.*|h%[(.*)%]|h%s") 
+			if hChannel then 
+				channel = hChannel
 				line = gsub(line, "|Hchannel:.*|h%[.*%]|h%s", "")
+			end
+			
+			-- Tagged channel
+			-- [2. Trade] Bravesteel: x 
+			local taggedChannel = strmatch(line, "%[%d+%.%s(.-)%] .-:.-") 
+			if taggedChannel then 
+				channel = taggedChannel
+				line = gsub(line, "%[%d+%.%s.-%] .-: .-", "")
 			end
 			
 			channel = strlower(channel)
 			channel = gsub(channel, " ", "")
-			if not channels[channel] then channel = "unknown" end
+			if not channels[channel] then 
+				print("unknown channel: "..channel, "line:", line)
+				channel = "unknown" 
+			end
 			
 			-- Only let entries past if they are in valid channels
 			if included_channels then
