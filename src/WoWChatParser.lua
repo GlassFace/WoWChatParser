@@ -228,31 +228,20 @@ local function strsplit(delimiter, text)
 end
 
 -- --------------------------------------------------------------------------------------------------------------------------------
--- DatetimeToUNIX
+-- UNIXTimeToOS
 -- Parses a dateString (in UNIX timestamp format) into a time in os.time() format
 -- ----------------------------------------------------------------	
-function DatetimeToUNIX(dateString)
+function UNIXTimeToOS(dateString)
 	local pattern = "(%d+)%-(%d+)%-(%d+)%a(%d+)%:(%d+)%:([%d%.]+)([Z%p])(%d*)%:?(%d*)";
-	local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin
 	local monthLookup = {Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12}
-	local convertedTimestamp
 	local offset = 0
-	if mode and mode == "ctime" then
-		pattern = "%w+%s+(%w+)%s+(%d+)%s+(%d+)%:(%d+)%:(%d+)%s+(%w+)%s+(%d+)"
-		local monthName, TZName
-		monthName, xday, xhour, xminute, xseconds, TZName, xyear = string.match(dateString,pattern)
-		xmonth = monthLookup[monthName]
-		convertedTimestamp = os.time({year = xyear, month = xmonth,
-		day = xday, hour = xhour, min = xminute, sec = xseconds})
-	else
-		xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
-		convertedTimestamp = os.time({year = xyear, month = xmonth,
-		day = xday, hour = xhour, min = xminute, sec = xseconds})
-		if xoffsetHour then
-			offset = xoffsethour * 60 + xoffsetmin
-			if xoffset == "-" then
-				offset = offset * -1
-			end
+	local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
+	local convertedTimestamp = os.time({year = xyear, month = xmonth,
+	day = xday, hour = xhour, min = xminute, sec = xseconds})
+	if xoffsetHour then
+		offset = xoffsethour * 60 + xoffsetmin
+		if xoffset == "-" then
+			offset = offset * -1
 		end
 	end
 	return convertedTimestamp + offset
@@ -434,7 +423,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 		-- WoW doesn't put year in its log.. Awkward around December/January..
 		--"2014-"..timeStamp_month.."-"..timeStamp_day.."T"..timeStamp_hours..":"..timeStamp_minutes..":"..timeStamp_seconds.."Z"
 		unix_timeStamp = BuildUnixTimeStamp(2014, timeStamp_month, timeStamp_day, timeStamp_hours, timeStamp_minutes, timeStamp_seconds)
-		timeStamp_number = DatetimeToUNIX(unix_timeStamp)
+		timeStamp_number = UNIXTimeToOS(unix_timeStamp)
 		
 		--[[
 		-- Month numbers to month words
@@ -585,7 +574,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			startTime_minutes = addLeadingZero(startTime_minutes) or "00"
 			startTime_seconds = addLeadingZero(startTime_seconds) or "00"
 			start_timestamp = BuildUnixTimeStamp(2014, startTime_month, startTime_day, startTime_hours, startTime_minutes, startTime_seconds)
-			start_timestamp_number = DatetimeToUNIX(start_timestamp)
+			start_timestamp_number = UNIXTimeToOS(start_timestamp)
 		end
 		
 		-- endDateTime
@@ -607,7 +596,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			endTime_minutes = addLeadingZero(endTime_minutes) or "59"
 			endTime_seconds = addLeadingZero(endTime_seconds) or "59"
 			end_timestamp = BuildUnixTimeStamp(2014, endTime_month, endTime_day, endTime_hours, endTime_minutes, endTime_seconds)
-			end_timestamp_number = DatetimeToUNIX(end_timestamp)
+			end_timestamp_number = UNIXTimeToOS(end_timestamp)
 		end
 	
 		-- Write HTML Header, CSS & Colors
