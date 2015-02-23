@@ -12,7 +12,7 @@ local channels = {}
 	channels["party"] = "#AEABFC"
 	channels["partyleader"] = "#7AC5FC"
 	channels["raid"] = "#970000"
-	channels["raidLeader"] = "#FF4D0B"
+	channels["raidleader"] = "#FF4D0B"
 	channels["raidwarning"] = "#FFDDB4"
 	channels["officer"] = "#40BC40"
 	channels["battleground"] = "#FF7D01"
@@ -181,17 +181,13 @@ local months = {}
 
 
 local channelPatterns = {}
-	channelPatterns["%w+ says:"] = "say"
-	channelPatterns["%w+ yells:"] = "yell"
-	channelPatterns["%w+ rolls %d+"] = "roll"
-	channelPatterns["%w+ whispers: .*"] = "playerwhisper_in"
+	channelPatterns["^%w+ says:"] = "say"
+	channelPatterns["^%w+ yells:"] = "yell"
+	channelPatterns["^%w+ rolls %d+"] = "roll"
+	channelPatterns["^%w+ whispers: .*"] = "playerwhisper_in"
 	channelPatterns["^To %w+: .*"] = "playerwhisper_out"
 	channelPatterns["^To |.*|.*|.*: .*"] = "playerwhisper_out"
-	
-	-- TODO: Fix these:
-	--channelPatterns["^%[1%. General%] %w+: "] = "general"
-	--channelPatterns["^%[2%. Trade%] %w+: "] = "trade"
-	--channelPatterns["^%[3%. LocalDefense%] %w+: "] = "localdefense"
+	channelPatterns["^%[Raid%s+Warning%]%s+"] = "raidwarning"
 	
 	channelPatterns["%w+ .*"] = "emote" -- Gonna catch a lot of false positives here	
 	
@@ -236,8 +232,7 @@ function UNIXTimeToOS(dateString)
 	local monthLookup = {Jan = 1, Feb = 2, Mar = 3, Apr = 4, May = 5, Jun = 6, Jul = 7, Aug = 8, Sep = 9, Oct = 10, Nov = 11, Dec = 12}
 	local offset = 0
 	local xyear, xmonth, xday, xhour, xminute, xseconds, xoffset, xoffsethour, xoffsetmin = string.match(dateString,pattern)
-	local convertedTimestamp = os.time({year = xyear, month = xmonth,
-	day = xday, hour = xhour, min = xminute, sec = xseconds})
+	local convertedTimestamp = os.time({year = xyear, month = xmonth, day = xday, hour = xhour, min = xminute, sec = xseconds}) or 0
 	if xoffsetHour then
 		offset = xoffsethour * 60 + xoffsetmin
 		if xoffset == "-" then
@@ -279,7 +274,7 @@ end
 -- Parser class
 -- --------------------------------------------------------------------------------------------------------------------------------
 local Parser = {}
-Parser.version = { major = 0.2, minor = 0, }
+Parser.version = { major = 0.2, minor = 1, }
 Parser.versionString = Parser.version.major..Parser.version.minor
 
 	-- --------------------------------------------------------------------------------------------------------------------------------
@@ -288,7 +283,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 	-- ----------------------------------------------------------------		
 	function Parser:Main(...)
 		local argv = {...}
-		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml, keyword, avatar
+		local inputFileName, outputFileName, startDateTime, endDateTime, filters, noHtml, keyword, avatar, openFileAfter
 		inputFileName = argv[1]
 		outputFileName = argv[2] or "output.htm"
 
@@ -307,6 +302,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			avatar = strmatch(val, "--avatar=(.*)%s*") or avatar
 			
 			noHtml = strmatch(val, "--raw") or noHtml
+			openFileAfter = strmatch(val, "--open") or openFileAfter
 		end
 		
 		self:Info(not inputFileName) -- Show usage and quit if no inputFileName		
@@ -338,7 +334,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			local filters_table = strsplit(",", filters)
 			
 			for key, channelOrGroup in pairs(filters_table) do
-				local negatedChannel = strmatch(channelOrGroup, "%-(%w*)")
+				local negatedChannel = strmatch(channelOrGroup, "%-([%w_]*)")
 				
 				if (negatedChannel and channels[negatedChannel]) then
 					if not excluded_channels then excluded_channels = {} end
@@ -386,15 +382,19 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 		-- Parse and generate HTML
 		local startTime = os.clock()
 		local junkLines = self:ParseText(inputFile, outputFile, numLines, startDateTime, endDateTime, included_channels, excluded_channels, keyword, avatar, noHtml)
-		print("\nWrote "..(numLines-junkLines).." lines (after filtering) to file: '"..outputFileName.."' in "..string.format("%.2f seconds", os.clock() - startTime))
+		print("\nProcessed and filtered "..(numLines-junkLines).." lines in "..string.format("%.2f seconds", os.clock() - startTime))
 		if startDateTime then print("Entries before "..startDateTime.." were discarded.") end
 		if endDateTime then print("Entries after "..endDateTime.." were discarded.") end
 		if included_channels then print("Only entries from the following channels were processed: "..tconcatkeys(included_channels, ", ")) end
 		if excluded_channels then print("Entries from the following channels were not processed: "..tconcatkeys(excluded_channels, ", ")) end
 		
-		outputFile:flush()
+		print("Writing output to file. Please wait...")
+		--outputFile:flush()
 		outputFile:close()
+		print("Wrote output to file: '"..outputFileName.."'")
 		inputFile:close()
+		
+		if openFileAfter then os.execute("start "..outputFileName) end
 		
 		return 0
 	end	
@@ -481,8 +481,7 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			channel = strlower(channel)
 			channel = gsub(channel, " ", "")
 			if not channels[channel] then 
-				--print("unknown channel: "..channel, "line:", line)
-				channel = "unknown" 
+				channel = "unknown".."("..channel.."?)"
 			end
 			
 			-- Only let entries past if they are in valid channels
@@ -614,7 +613,9 @@ Parser.versionString = Parser.version.major..Parser.version.minor
 			if numLines >= progressTick then
 				write(".")
 				numLines = 0
-			end		
+			end
+
+			-- Only let entries past if they are in valid channels
 			parsedLine = self:ParseLine(line, start_timestamp_number, end_timestamp_number, included_channels, excluded_channels, keyword, avatar, noHtml)
 			if parsedLine then
 				outputFile:write(parsedLine)
