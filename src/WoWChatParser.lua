@@ -181,11 +181,11 @@ local months = {}
 
 
 local channelPatterns = {}
-	channelPatterns["^%w+ says:"] = "say"
-	channelPatterns["^%w+ yells:"] = "yell"
-	channelPatterns["^%w+ rolls %d+"] = "roll"
-	channelPatterns["^%w+ whispers: .*"] = "playerwhisper_in"
-	channelPatterns["^To %w+: .*"] = "playerwhisper_out"
+	channelPatterns["^[%w%-]+ says:"] = "say"
+	channelPatterns["^[%w%-]+ yells:"] = "yell"
+	channelPatterns["^[%w%-]+ rolls %d+"] = "roll"
+	channelPatterns["^[%w%-]+ whispers: .*"] = "playerwhisper_in"
+	channelPatterns["^To [%w%-]+: .*"] = "playerwhisper_out"
 	channelPatterns["^To |.*|.*|.*: .*"] = "playerwhisper_out"
 	channelPatterns["^%[Raid%s+Warning%]%s+"] = "raidwarning"
 	
